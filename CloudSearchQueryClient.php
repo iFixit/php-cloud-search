@@ -3,6 +3,7 @@
 namespace Aws\CloudSearch\Query;
 
 require_once __DIR__ . '/CloudSearchAbstractClient.php';
+require_once __DIR__ . '/CloudSearchQuery.php';
 
 use Aws\CloudSearch\Common\CloudSearchAbstractClient;
 use Guzzle\Common\Collection;
@@ -19,19 +20,6 @@ use Guzzle\Service\Description\ServiceDescription;
  *       'domain' => 'mydomain'
  *    ]);
  *    $results = $client->query(['q' => 'some query text']);
- *
- * Possible future query interface:
- *
- *    $q = new CloudSearchQuery();
- *    $q->booleanQuery(
- *       $q->and_(
- *          $q->field('title', $userQuery),
- *          $q->field('public', true),
- *          $q->or_(
- *             $q->filter('year', $q->range(1990, NULL)),
- *             $q->field('timeless', true))));
- *    $q->facet('genre');
- *    $results = $client->query($q);
  */
 class CloudSearchQueryClient extends CloudSearchAbstractClient {
    const LATEST_API_VERSION = '2011-02-01';
@@ -41,5 +29,16 @@ class CloudSearchQueryClient extends CloudSearchAbstractClient {
          'service' => 'search',
          'description_path' => __DIR__ . '/Resources/cs-query-%s.php'
       ], $config);
+   }
+
+   public static function newQuery() {
+      return new CloudSearchQuery;
+   }
+
+   public function query($args = []) {
+      if (is_a($args, '\Aws\CloudSearch\Query\CloudSearchQuery'))
+         $args = $args->build();
+
+      return $this->getCommand('query', $args)->getResult();
    }
 }
