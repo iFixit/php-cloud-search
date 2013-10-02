@@ -46,7 +46,7 @@ return [
             'size' => [
                'type' => 'integer',
                'location' => 'query',
-               'minimum' => 1,
+               'minimum' => 0,
                'maximum' => 4294967295
             ]
          ],
