@@ -110,6 +110,11 @@ class CloudSearchQuery {
       return $query;
    }
 
+   public function defaultField($value) {
+      $value = self::str($value);
+      return $this->addExp($value->build());
+   }
+
    public function field($field, $value) {
       $value = self::str($value);
       return $this->addExp(['field', $field, $value->build()]);
