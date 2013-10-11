@@ -1,7 +1,5 @@
 <?php
 
-require_once '3P/aws-sdk-2/aws-autoloader.php';
-
 use Guzzle\Service\AbstractConfigLoader;
 
 /**
