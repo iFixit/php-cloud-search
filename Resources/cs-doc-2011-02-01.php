@@ -55,6 +55,25 @@ return [
                ]
             ]
          ]
+      ],
+      'SendBatchRaw' => [
+         'httpMethod' => 'POST',
+         'uri' => '/{version}/documents/batch',
+         'responseClass' => 'SendBatchResponse',
+         'responseType' => 'model',
+         'parameters' => [
+            'Content-Type' => [
+               'type' => 'string',
+               'location' => 'header',
+               'static' => true,
+               'default' => 'application/json'
+            ],
+            'Json' => [
+               'type' => 'string',
+               'required' => true,
+               'location' => 'body',
+            ]
+         ]
       ]
    ],
    'models' => [
