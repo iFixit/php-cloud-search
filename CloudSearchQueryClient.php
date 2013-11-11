@@ -36,9 +36,25 @@ class CloudSearchQueryClient extends CloudSearchAbstractClient {
    }
 
    public function query($args = []) {
+      return $this->prepareQueryCommand($args)->getResult();
+   }
+
+   public function multiQuery($batchArgs) {
+      $commands = [];
+      foreach ($batchArgs as $args)
+         $commands[] = $this->prepareQueryCommand($args);
+
+      $commands = $this->execute($commands);
+
+      return array_map(function ($command) {
+         return $command->getResult();
+      }, $commands);
+   }
+
+   protected function prepareQueryCommand($args) {
       if (is_a($args, '\Aws\CloudSearch\Query\CloudSearchQuery'))
          $args = $args->build();
 
-      return $this->getCommand('query', $args)->getResult();
+      return $this->getCommand('query', $args);
    }
 }
