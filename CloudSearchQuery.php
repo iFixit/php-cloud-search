@@ -129,7 +129,7 @@ class CloudSearchQuery {
       $args = array_flatten(func_get_args());
       $exps = [];
       foreach ($args as $id) {
-         $exps[] = $this->removeExp($id);
+         $exps[] = $this->deleteExp($id);
       }
 
       return $this->addExp(array_merge(['and'], $exps));
@@ -139,40 +139,58 @@ class CloudSearchQuery {
       $args = array_flatten(func_get_args());
       $exps = [];
       foreach ($args as $id) {
-         $exps[] = $this->removeExp($id);
+         $exps[] = $this->deleteExp($id);
       }
 
       return $this->addExp(array_merge(['or'], $exps));
    }
 
    public function not_($id) {
-      $exp = $this->removeExp($id);
+      $exp = $this->deleteExp($id);
       return $this->addExp(['not', $exp]);
    }
 
-   /**
-    * Note that `facet` requires that all facet fields be specified in one go,
-    * and it replaces any prior facet specification.
-    */
    public function facet(/* $facet1, $facet2, ... */) {
-      $facets = array_flatten(func_get_args());
-      $this->facets = array_combine($facets, $facets);
+      $facetNames = array_flatten(func_get_args());
+      foreach ($facetNames as $facetName)
+         $this->facets[$facetName] = $facetName;
    }
 
-   public function facetConstraints($facet, $type, $constraints) {
-      $this->facetConstraints[$facet] = [];
-      foreach ($constraints as $constraint) {
-         $constraint = self::$type($constraint);
-         $this->facetConstraints[$facet][] = $constraint->build();
+   public function deleteFacets(/* $facet1, $facet2, ... */) {
+      $facetNames = array_flatten(func_get_args());
+
+      if (empty($facetNames)) {
+         $this->facets = [];
+         $this->facetConstraints = [];
+         $this->facetSorts = [];
+         $this->facetTopN = [];
+         return;
+      }
+
+      foreach ($facetNames as $facet) {
+         unset($this->facets[$facetName]);
+         unset($this->facetConstraints[$facetName]);
+         unset($this->facetSorts[$facetName]);
+         unset($this->facetTopN[$facetName]);
       }
    }
 
    public function facetConstraintsUint($facet, $constraints) {
-      return $this->facetConstraints($facet, 'uint', $constraints);
+      $this->facetConstraints[$facet] = [];
+      foreach ($constraints as $constraint) {
+         $constraint = self::uint($constraint);
+         $this->facetConstraints[$facet][] = $constraint->build();
+      }
    }
 
    public function facetConstraintsStr($facet, $constraints) {
-      return $this->facetConstraints($facet, 'str', $constraints);
+      $this->facetConstraints[$facet] = [];
+      foreach ($constraints as $constraint) {
+         $constraint = self::str($constraint);
+         $this->facetConstraints[$facet][] = $constraint->build(
+          CloudSearchQueryString::QUOTE,
+          CloudSearchQueryString::ESCAPE_COMMA);
+      }
    }
 
    public function facetSort($facet) {
@@ -252,6 +270,12 @@ class CloudSearchQuery {
       $this->thresholds[$rankName] = $range->build();
    }
 
+   public function deleteExp($id) {
+      $exp = $this->expIndex[$id];
+      unset($this->expIndex[$id]);
+      return $exp;
+   }
+
    protected function buildBooleanQuery() {
       $exps = [];
 
@@ -281,21 +305,15 @@ class CloudSearchQuery {
       $this->expIndex[$id] = $exp;
       return $id;
    }
-
-   protected function removeExp($id) {
-      $exp = $this->expIndex[$id];
-      unset($this->expIndex[$id]);
-      return $exp;
-   }
 }
 
 
 /**
  * A representation of strings to be passed as arguments to the text query and
  * boolean query functions, and to be used as facet constraints. Backslashes
- * and slashes are automatically escaped, and the default is to surround the
- * string with single quotes. You can override this behavior when building the
- * final string. Example:
+ * and single quotes are automatically escaped, and the default is to surround
+ * the string with single quotes. You can override this behavior when building
+ * the final string. Example:
  *
  *    use \Aws\CloudSearch\Query\CloudSearchQueryClient;
  *    use \Aws\CloudSearch\Query\CloudSearchQueryString;
@@ -312,12 +330,13 @@ class CloudSearchQuery {
 class CloudSearchQueryString {
    const QUOTE = 1;
    const NO_QUOTE = 0;
+   const ESCAPE_COMMA = 1;
+   const NO_ESCAPE_COMMA = 0;
 
    protected $str;
 
    public function __construct($s) {
-      $s = strtolower(trim(strval($s)));
-      $s = preg_replace('/([\'\\\\])/', '\\\\$1', $s);
+      $s = trim(strval($s));
       $this->str = $s;
    }
 
@@ -328,11 +347,16 @@ class CloudSearchQueryString {
       return $this;
    }
 
-   public function build($quote = self::QUOTE) {
-      if ($quote == self::NO_QUOTE)
+   public function build($quote = self::QUOTE,
+    $escapeComma = self::NO_ESCAPE_COMMA) {
+      if ($quote == self::NO_QUOTE) {
          return $this->str;
-      else
-      return "'{$this->str}'";
+      } else {
+         $s = preg_replace('/([\'\\\\])/', '\\\\$1', $this->str);
+         if ($escapeComma == self::ESCAPE_COMMA)
+            $s = str_replace(',', '\\,', $s);
+         return "'{$s}'";
+      }
    }
 }
 
