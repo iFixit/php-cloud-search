@@ -347,6 +347,10 @@ class CloudSearchQueryString {
       return $this;
    }
 
+   public function getValue() {
+      return $this->str;
+   }
+
    public function build($quote = self::QUOTE,
     $escapeComma = self::NO_ESCAPE_COMMA) {
       if ($quote == self::NO_QUOTE) {
@@ -409,6 +413,12 @@ class CloudSearchQueryUint {
       } else if (is_numeric($n)) {
          $this->exact = max(0, intval($n));
       }
+   }
+
+   public function getValue() {
+      if (!is_null($this->exact))
+         return $this->exact;
+      return [$this->from, $this->to];
    }
 
    public function build() {
