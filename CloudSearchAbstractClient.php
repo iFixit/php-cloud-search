@@ -56,14 +56,25 @@ abstract class CloudSearchAbstractClient extends \Guzzle\Service\Client {
          }
       }
 
-      $client = new static('', $config);
+      // Endpoints are CloudSearch's terminology, but we're using an endpoint
+      // (including the protocol, optional port, etc.) as Guzzle's baseUrl.
+      // Most of the client configuration happens in the call to
+      // setDescription, but I couldn't find a way to have the configuration
+      // set a baseUrl *with* a port (because substituting config values into
+      // baseUrl causes them to be url-encoded). So we leave baseUrl out of the
+      // service description and set it directly when instantiating the client.
+      $baseUrl = $config['endpoint'];
+      unset($config['endpoint']);
+
+      $client = new static($baseUrl, $config);
 
       // Fill in the missing API version in the description path; the path
       // should contain '%s' where the API version is to be inserted.
       $descriptionFile = sprintf($clientOptions['description_path'],
        static::LATEST_API_VERSION);
-      $description = ServiceDescription::factory($descriptionFile);
-      $client->setDescription($description);
+
+      // Configure the client according to the service description.
+      $client->setDescription(ServiceDescription::factory($descriptionFile));
 
       return $client;
    }

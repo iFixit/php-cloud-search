@@ -3,7 +3,6 @@
 return [
    'name' => 'CloudSearch document upload',
    'apiVersion' => '2011-02-01',
-   'baseUrl' => 'http://{endpoint}',
    'description' => 'Upload batches of documents to a CloudSearch domain',
    'operations' => [
       'SendBatch' => [
