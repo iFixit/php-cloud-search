@@ -4,6 +4,7 @@ namespace Aws\CloudSearch\Common;
 
 use Guzzle\Common\Collection;
 use Guzzle\Service\Description\ServiceDescription;
+use Guzzle\Plugin\Backoff\BackoffPlugin;
 
 /**
  * An abstract base class for CloudSearch clients that send requests to a
@@ -36,8 +37,10 @@ abstract class CloudSearchAbstractClient extends \Guzzle\Service\Client {
 
       $default = [
          'version' => static::LATEST_API_VERSION,
-         'domain' => NULL,
-         'endpoint' => NULL
+         'domain' => null,
+         'endpoint' => null,
+         'retry.count' => 3,
+         'retry.codes' => [507, 509]
       ];
       $required = ['version'];
       $config = Collection::fromConfig($config, $default, $required);
@@ -66,6 +69,12 @@ abstract class CloudSearchAbstractClient extends \Guzzle\Service\Client {
       $baseUrl = $config['endpoint'];
       unset($config['endpoint']);
 
+      // Remove the custom retry configuration from the array before passing it
+      // off to the client.
+      $retryCount = $config['retry.count'];
+      $retryCodes = $config['retry.codes'];
+      unset($config['retry.count'], $config['retry.codes']);
+
       $client = new static($baseUrl, $config);
 
       // Fill in the missing API version in the description path; the path
@@ -75,6 +84,15 @@ abstract class CloudSearchAbstractClient extends \Guzzle\Service\Client {
 
       // Configure the client according to the service description.
       $client->setDescription(ServiceDescription::factory($descriptionFile));
+
+      // Add exponential backoff if the config hasn't explicitly disabled it.
+      if ($retryCount > 0 && count($retryCodes) > 0) {
+         $backoff = BackoffPlugin::getExponentialBackoff(
+          /* maxRetries */ $retryCount,
+          /* httpCodes  */ $retryCodes);
+
+         $client->addSubscriber($backoff);
+      }
 
       return $client;
    }
