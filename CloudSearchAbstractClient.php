@@ -40,7 +40,7 @@ abstract class CloudSearchAbstractClient extends \Guzzle\Service\Client {
          'domain' => null,
          'endpoint' => null,
          'retry.count' => 3,
-         'retry.codes' => [507, 509]
+         'retry.codes' => [500, 502, 503, 504, 507, 509]
       ];
       $required = ['version'];
       $config = Collection::fromConfig($config, $default, $required);
