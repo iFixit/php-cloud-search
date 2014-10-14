@@ -3,6 +3,7 @@
 return [
    'name' => 'CloudSearchQuery',
    'apiVersion' => '2011-02-01',
+   'signatureVersion' => 'v4',
    'description' => 'Query a domain index',
    'operations' => [
       'Query' => [

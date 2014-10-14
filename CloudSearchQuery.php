@@ -1,6 +1,6 @@
 <?php
 
-namespace Aws\CloudSearch\Query;
+namespace Aws\CloudSearchQuery;
 
 /**
  * A fairly thin convenience layer for building queries to be passed to the

@@ -1,37 +1,43 @@
 <?php
 
-namespace Aws\CloudSearch\Query;
+namespace Aws\CloudSearchQuery;
 
-require_once __DIR__ . '/CloudSearchAbstractClient.php';
+require_once __DIR__ . '/CloudSearchClientBuilder.php';
 require_once __DIR__ . '/CloudSearchQuery.php';
 
-use Aws\CloudSearch\Common\CloudSearchAbstractClient;
-use Guzzle\Common\Collection;
-use Guzzle\Service\Description\ServiceDescription;
+use Aws\Common\Client\AbstractClient;
+use Aws\Common\Enum\ClientOptions as Options;
+use Aws\CloudSearch\CloudSearchClientBuilder;
 
 /**
- * A client for making query requests to an established CloudSearch index.  The
- * client requires an endpoint to make its requests to; see
- * CloudSearchAbstractClient for a description of how to specify it.
+ * A client for making query requests to an established CloudSearch index. The
+ * client requires an endpoint (specified via the `base_url` config parameter)
+ * to make its requests to.
  *
  * Example:
  *
  *    $client = CloudSearchQueryClient::factory([
- *       'domain' => 'mydomain'
+ *       'base_url' => 'mydomain'
  *    ]);
+ *
  *    $results = $client->query(['q' => 'some query text']);
  */
-class CloudSearchQueryClient extends CloudSearchAbstractClient {
+class CloudSearchQueryClient extends AbstractClient {
    const LATEST_API_VERSION = '2011-02-01';
+   const DESCRIPTION_NAME = 'cs-query-%s.php';
 
    public static function factory($config = []) {
-      return parent::factory([
-         'service' => 'search',
-         'description_path' => __DIR__ . '/Resources/cs-query-%s.php'
-      ], $config);
+      return CloudSearchClientBuilder::factory(__NAMESPACE__)
+       ->setConfig($config)
+       ->setConfigDefaults([
+            Options::VERSION => self::LATEST_API_VERSION,
+            Options::SERVICE_DESCRIPTION =>
+             __DIR__ . '/Resources/' . self::DESCRIPTION_NAME
+         ])
+       ->build();
    }
 
-   public static function newQuery() {
+   public function newQuery() {
       return new CloudSearchQuery;
    }
 
@@ -52,7 +58,7 @@ class CloudSearchQueryClient extends CloudSearchAbstractClient {
    }
 
    protected function prepareQueryCommand($args) {
-      if (is_a($args, '\Aws\CloudSearch\Query\CloudSearchQuery'))
+      if (is_a($args, '\Aws\CloudSearchQuery\CloudSearchQuery'))
          $args = $args->build();
 
       return $this->getCommand('query', $args);
