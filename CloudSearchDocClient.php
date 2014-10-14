@@ -1,68 +1,41 @@
 <?php
 
-namespace Aws\CloudSearch\Doc;
+namespace Aws\CloudSearchDoc;
 
-require_once __DIR__ . '/CloudSearchAbstractClient.php';
+require_once __DIR__ . '/CloudSearchClientBuilder.php';
 
-use Aws\CloudSearch\Common\CloudSearchAbstractClient;
-use Guzzle\Service\Command\DefaultRequestSerializer;
-use Guzzle\Service\Command\LocationVisitor\Request\JsonVisitor;
-use Guzzle\Http\Message\RequestInterface;
-use Guzzle\Service\Command\CommandInterface;
+use Aws\CloudSearch\CloudSearchClientBuilder;
+use Aws\Common\Client\AbstractClient;
+use Aws\Common\Enum\ClientOptions as Options;
 
 /**
  * A client for sending document batches to an established CloudSearch index.
- * The client requires an endpoint to make its requests to; see
- * CloudSearchAbstractClient for a description of how to specify it.
+ *  The client requires an endpoint (specified via the `base_url` config
+ *  parameter) to make its requests to.
  *
  * Example:
  *
  *    $client = CloudSearchDocClient::factory([
- *       'domain' => 'mydomain'
+ *       'base_url' => 'mydomain'
  *    ]);
  *
- *    $client->sendBatch(['Documents' => $arrayOfSdfData]);
- *    // OR
- *    $client->sendBatchRaw(['Json' => $sdfJsonString]);
+ *    $client->uploadDocuments([
+ *       'documents' => $sdfJsonString,
+ *       'contentType' => 'application/json'
+ *    ]);
  */
-class CloudSearchDocClient extends CloudSearchAbstractClient {
+class CloudSearchDocClient extends AbstractClient {
    const LATEST_API_VERSION = '2011-02-01';
+   const DESCRIPTION_NAME = 'cs-doc-%s.php';
 
    public static function factory($config = []) {
-      $client = parent::factory([
-         'service' => 'doc',
-         'description_path' => __DIR__ . '/Resources/cs-doc-%s.php'
-      ], $config);
-
-      return $client;
+      return CloudSearchClientBuilder::factory(__NAMESPACE__)
+       ->setConfig($config)
+       ->setConfigDefaults([
+            Options::VERSION => self::LATEST_API_VERSION,
+            Options::SERVICE_DESCRIPTION =>
+             __DIR__ . '/Resources/' . self::DESCRIPTION_NAME
+         ])
+       ->build();
    }
 }
-
-
-/**
- * Serialize a PHP array to a JSON array in the request body. This is in
- * contrast to JsonVisitor, which serializes request arguments to key/value
- * pairs in a single JSON object in the request body.
- */
-class JsonArrayVisitor extends JsonVisitor {
-   public function after(CommandInterface $command,
-    RequestInterface $request) {
-      if (isset($this->data[$command])) {
-         $jsonData = $this->data[$command];
-         if (count($jsonData) != 1) {
-            throw new Exception(
-             'JSON array request body requires exactly one parameter.');
-         }
-         $jsonArray = array_values($jsonData)[0];
-         if (!is_array($jsonArray)) {
-            throw new Exception(
-             "JSON array request body requires a parameter of type 'array'.");
-         }
-         $this->data[$command] = $jsonArray;
-         return parent::after($command, $request);
-      }
-   }
-}
-
-DefaultRequestSerializer::getInstance()->addVisitor('json.array',
- new JsonArrayVisitor);
