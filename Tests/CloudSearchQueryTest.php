@@ -2,12 +2,12 @@
 
 require_once __DIR__ . '/../CloudSearchQuery.php';
 
-use Aws\CloudSearch\Query\CloudSearchQuery;
+use Aws\CloudSearchQuery\CloudSearchQuery;
 
 class CloudSearchQueryTest extends PHPUnit_Framework_TestCase {
 
    /**
-    * @expectedException \Aws\CloudSearch\Query\EmptyQueryException
+    * @expectedException \Aws\CloudSearchQuery\EmptyQueryException
     */
    public function testEmptyQueryException() {
       $q = new CloudSearchQuery();
@@ -32,7 +32,7 @@ class CloudSearchQueryTest extends PHPUnit_Framework_TestCase {
       $this->assertSame('..20', $q::uint([NULL, 20])->build());
 
       // Does passing in an existing CloudSearchQueryUint work?
-      $uint = new \Aws\CloudSearch\Query\CloudSearchQueryUint([12, NULL]);
+      $uint = new \Aws\CloudSearchQuery\CloudSearchQueryUint([12, NULL]);
       $this->assertSame('12..', $q::uint($uint)->build());
    }
 
@@ -48,7 +48,14 @@ class CloudSearchQueryTest extends PHPUnit_Framework_TestCase {
 
       // Do we respect the NO_QUOTE setting?
       $this->assertSame("query", $q::str('query')->build(
-       \Aws\CloudSearch\Query\CloudSearchQueryString::NO_QUOTE));
+       \Aws\CloudSearchQuery\CloudSearchQueryString::NO_QUOTE));
+
+      // Do we add a wildcard?
+      $query = $q::str('query')->addWildcard();
+      $this->assertSame("'query*'", $query->build());
+
+      // Do we NOT add it twice?
+      $this->assertSame("'query*'", $query->addWildcard()->build());
    }
 
    public function testBooleanQueryOneExp() {
@@ -124,11 +131,18 @@ class CloudSearchQueryTest extends PHPUnit_Framework_TestCase {
       // Do we remember facets correctly?
       $this->assertSame('field1,field2', $query['facet']);
 
+      // Each call to `facet` should append facets.
       $q->facet('field3');
       $query = $q->build();
+      $this->assertSame('field1,field2,field3', $query['facet']);
 
-      // Each call to `facet` should replace any prior arrangement.
-      $this->assertSame('field3', $query['facet']);
+      // We can delete facets.
+      $q->deleteFacets('field2');
+      $query = $q->build();
+      $this->assertSame('field1,field3', $query['facet']);
+      $q->deleteFacets();
+      $query = $q->build();
+      $this->assertArrayNotHasKey('facet', $query);
    }
 
    public function testFacetConstraints() {
@@ -252,6 +266,16 @@ class CloudSearchQueryTest extends PHPUnit_Framework_TestCase {
       $q->returnFields('field1', 'field2', 'field3');
       $query = $q->build();
       $this->assertSame('field1,field2,field3', $query['return-fields']);
+
+      // Adding the same field incrementally does nothing.
+      $q->addReturnField('field3');
+      $query = $q->build();
+      $this->assertSame('field1,field2,field3', $query['return-fields']);
+
+      // Adding a new return field incrementally appends it.
+      $q->addReturnField('last');
+      $query = $q->build();
+      $this->assertSame('field1,field2,field3,last', $query['return-fields']);
    }
 
    public function testSizeStartLimit() {
