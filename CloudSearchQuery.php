@@ -269,6 +269,11 @@ class CloudSearchQuery {
       return $this;
    }
 
+   public function addReturnField($field) {
+      $this->returnFields[$field] = $field;
+      return $this;
+   }
+
    public function size($size) {
       $this->size = max(0, intval($size));
       return $this;
