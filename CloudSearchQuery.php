@@ -154,8 +154,10 @@ class CloudSearchQuery {
 
    public function facet(/* $facet1, $facet2, ... */) {
       $facetNames = array_flatten(func_get_args());
-      foreach ($facetNames as $facetName)
+      foreach ($facetNames as $facetName) {
          $this->facets[$facetName] = $facetName;
+      }
+      return $this;
    }
 
    public function deleteFacets(/* $facet1, $facet2, ... */) {
@@ -166,15 +168,16 @@ class CloudSearchQuery {
          $this->facetConstraints = [];
          $this->facetSorts = [];
          $this->facetTopN = [];
-         return;
+      } else {
+         foreach ($facetNames as $facet) {
+            unset($this->facets[$facetName]);
+            unset($this->facetConstraints[$facetName]);
+            unset($this->facetSorts[$facetName]);
+            unset($this->facetTopN[$facetName]);
+         }
       }
 
-      foreach ($facetNames as $facet) {
-         unset($this->facets[$facetName]);
-         unset($this->facetConstraints[$facetName]);
-         unset($this->facetSorts[$facetName]);
-         unset($this->facetTopN[$facetName]);
-      }
+      return $this;
    }
 
    public function facetConstraintsUint($facet, $constraints) {
@@ -183,6 +186,7 @@ class CloudSearchQuery {
          $constraint = self::uint($constraint);
          $this->facetConstraints[$facet][] = $constraint->build();
       }
+      return $this;
    }
 
    public function facetConstraintsStr($facet, $constraints) {
@@ -193,6 +197,7 @@ class CloudSearchQuery {
           CloudSearchQueryString::QUOTE,
           CloudSearchQueryString::ESCAPE_COMMA);
       }
+      return $this;
    }
 
    public function facetSort($facet) {
@@ -203,11 +208,13 @@ class CloudSearchQuery {
 
    public function facetTopN($facet, $value) {
       $this->facetTopN[$facet] = max(1, intval($value));
+      return $this;
    }
 
    public function q($query) {
       $query = self::str($query);
       $this->q = $query->build(CloudSearchQueryString::NO_QUOTE);
+      return $this;
    }
 
    /**
@@ -239,37 +246,49 @@ class CloudSearchQuery {
          throw new Exception(
           'A maximum of 10 fields and rank expressions can be specified.');
       }
+
+      return $this;
    }
 
    public function defineRank($name, $rankExp) {
       $this->rankExpressions[$name] = $rankExp;
+      return $this;
    }
 
    public function resultsType($type) {
+      if ($type != self::JSON && $type != self::XML) {
+         throw new Exception("Result type must be 'json' or 'xml'.");
+      }
       $this->resultsType = $type;
+      return $this;
    }
 
    public function returnFields(/* $field1, $field2, ... */) {
       $returnFields = array_flatten(func_get_args());
       $this->returnFields = array_combine($returnFields, $returnFields);
+      return $this;
    }
 
    public function size($size) {
       $this->size = max(0, intval($size));
+      return $this;
    }
 
    public function start($start) {
       $this->start = max(0, intval($start));
+      return $this;
    }
 
    public function limit($start, $size) {
       $this->start($start);
       $this->size($size);
+      return $this;
    }
 
    public function threshold($rankName, $range) {
       $range = self::uint($range);
       $this->thresholds[$rankName] = $range->build();
+      return $this;
    }
 
    public function deleteExp($id) {
@@ -286,10 +305,11 @@ class CloudSearchQuery {
       }
 
       $numExps = count($exps);
-      if ($numExps == 1)
+      if ($numExps == 1) {
          return $exps[0];
-      else
+      } else {
          return '(and ' . implode(' ', $exps) . ')';
+      }
    }
 
    protected function buildBooleanQuerySubexp($exp) {
@@ -375,8 +395,9 @@ class CloudSearchQueryString {
          return $this->str;
       } else {
          $s = preg_replace('/([\'\\\\])/', '\\\\$1', $this->str);
-         if ($escapeComma == self::ESCAPE_COMMA)
+         if ($escapeComma == self::ESCAPE_COMMA) {
             $s = str_replace(',', '\\,', $s);
+         }
          return "'{$s}'";
       }
    }
@@ -478,18 +499,22 @@ class CloudSearchQueryFacetSort {
 
    function alpha() {
       $this->string = 'alpha';
+      return $this;
    }
 
    function count() {
       $this->string = 'count';
+      return $this;
    }
 
    function max($byField, $desc = false) {
       $this->string = ($desc ? '-' : '') . "max({$byField})";
+      return $this;
    }
 
    function sum($byField, $desc = false) {
       $this->string = ($desc ? '-' : '') . "sum({$byField})";
+      return $this;
    }
 
    function build() {
