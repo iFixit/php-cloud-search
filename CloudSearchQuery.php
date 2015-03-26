@@ -169,7 +169,7 @@ class CloudSearchQuery {
          $this->facetSorts = [];
          $this->facetTopN = [];
       } else {
-         foreach ($facetNames as $facet) {
+         foreach ($facetNames as $facetName) {
             unset($this->facets[$facetName]);
             unset($this->facetConstraints[$facetName]);
             unset($this->facetSorts[$facetName]);
