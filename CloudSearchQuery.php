@@ -41,17 +41,19 @@ class CloudSearchQuery {
    protected $thresholds = [];
 
    public static function uint($n) {
-      if (is_a($n, '\Aws\CloudSearch\Query\CloudSearchQueryUint'))
+      if (is_a($n, '\Aws\CloudSearchQuery\CloudSearchQueryUint')) {
          return $n;
-      else
+      } else {
          return new CloudSearchQueryUint($n);
+      }
    }
 
    public static function str($s) {
-      if (is_a($s, '\Aws\CloudSearch\Query\CloudSearchQueryString')) {
+      if (is_a($s, '\Aws\CloudSearchQuery\CloudSearchQueryString')) {
          return $s;
-      } else
+      } else {
          return new CloudSearchQueryString($s);
+      }
    }
 
    public function build() {
@@ -152,8 +154,10 @@ class CloudSearchQuery {
 
    public function facet(/* $facet1, $facet2, ... */) {
       $facetNames = array_flatten(func_get_args());
-      foreach ($facetNames as $facetName)
+      foreach ($facetNames as $facetName) {
          $this->facets[$facetName] = $facetName;
+      }
+      return $this;
    }
 
    public function deleteFacets(/* $facet1, $facet2, ... */) {
@@ -164,15 +168,16 @@ class CloudSearchQuery {
          $this->facetConstraints = [];
          $this->facetSorts = [];
          $this->facetTopN = [];
-         return;
+      } else {
+         foreach ($facetNames as $facetName) {
+            unset($this->facets[$facetName]);
+            unset($this->facetConstraints[$facetName]);
+            unset($this->facetSorts[$facetName]);
+            unset($this->facetTopN[$facetName]);
+         }
       }
 
-      foreach ($facetNames as $facet) {
-         unset($this->facets[$facetName]);
-         unset($this->facetConstraints[$facetName]);
-         unset($this->facetSorts[$facetName]);
-         unset($this->facetTopN[$facetName]);
-      }
+      return $this;
    }
 
    public function facetConstraintsUint($facet, $constraints) {
@@ -181,6 +186,7 @@ class CloudSearchQuery {
          $constraint = self::uint($constraint);
          $this->facetConstraints[$facet][] = $constraint->build();
       }
+      return $this;
    }
 
    public function facetConstraintsStr($facet, $constraints) {
@@ -191,6 +197,7 @@ class CloudSearchQuery {
           CloudSearchQueryString::QUOTE,
           CloudSearchQueryString::ESCAPE_COMMA);
       }
+      return $this;
    }
 
    public function facetSort($facet) {
@@ -201,11 +208,13 @@ class CloudSearchQuery {
 
    public function facetTopN($facet, $value) {
       $this->facetTopN[$facet] = max(1, intval($value));
+      return $this;
    }
 
    public function q($query) {
       $query = self::str($query);
       $this->q = $query->build(CloudSearchQueryString::NO_QUOTE);
+      return $this;
    }
 
    /**
@@ -237,37 +246,54 @@ class CloudSearchQuery {
          throw new Exception(
           'A maximum of 10 fields and rank expressions can be specified.');
       }
+
+      return $this;
    }
 
    public function defineRank($name, $rankExp) {
       $this->rankExpressions[$name] = $rankExp;
+      return $this;
    }
 
    public function resultsType($type) {
+      if ($type != self::JSON && $type != self::XML) {
+         throw new Exception("Result type must be 'json' or 'xml'.");
+      }
       $this->resultsType = $type;
+      return $this;
    }
 
    public function returnFields(/* $field1, $field2, ... */) {
       $returnFields = array_flatten(func_get_args());
       $this->returnFields = array_combine($returnFields, $returnFields);
+      return $this;
+   }
+
+   public function addReturnField($field) {
+      $this->returnFields[$field] = $field;
+      return $this;
    }
 
    public function size($size) {
       $this->size = max(0, intval($size));
+      return $this;
    }
 
    public function start($start) {
       $this->start = max(0, intval($start));
+      return $this;
    }
 
    public function limit($start, $size) {
       $this->start($start);
       $this->size($size);
+      return $this;
    }
 
    public function threshold($rankName, $range) {
       $range = self::uint($range);
       $this->thresholds[$rankName] = $range->build();
+      return $this;
    }
 
    public function deleteExp($id) {
@@ -284,10 +310,11 @@ class CloudSearchQuery {
       }
 
       $numExps = count($exps);
-      if ($numExps == 1)
+      if ($numExps == 1) {
          return $exps[0];
-      else
+      } else {
          return '(and ' . implode(' ', $exps) . ')';
+      }
    }
 
    protected function buildBooleanQuerySubexp($exp) {
@@ -315,8 +342,8 @@ class CloudSearchQuery {
  * the string with single quotes. You can override this behavior when building
  * the final string. Example:
  *
- *    use \Aws\CloudSearch\Query\CloudSearchQueryClient;
- *    use \Aws\CloudSearch\Query\CloudSearchQueryString;
+ *    use \Aws\CloudSearchQuery\CloudSearchQueryClient;
+ *    use \Aws\CloudSearchQuery\CloudSearchQueryString;
  *
  *    $client = CloudSearchQueryClient::factory();
  *    $q = $client->newQuery();
@@ -336,14 +363,30 @@ class CloudSearchQueryString {
    protected $str;
 
    public function __construct($s) {
-      $s = trim(strval($s));
-      $this->str = $s;
+      $this->str = trim(strval($s));
    }
 
-   public function addWildcard($dropTrailingS = true) {
-      if ($this->str[strlen($this->str) - 1] == '*')
-         return;
-      $this->str .= '*';
+   /**
+    * When adding terms to the index, CloudSearch does some basic stemming,
+    * part of which involves removing 's' from the ends of terms. Consequently,
+    * if we do a prefix search (via a wildcard) that ends in 's', we can't
+    * match any terms that originally ended in 's'. This isn't a problem for
+    * normal searches because CloudSearch automatically applies the same
+    * stemming to the query, but it doesn't perform stemming on prefix
+    * searches. For example, if we indexed 'cars' and 'carsick', the query
+    * 'cars' would match 'cars', but 'cars*' would only match 'carsick'.
+    *
+    * It's impossible(?) to get around this limitation here, but you can do it
+    * at the application level by checking for a trailing 's' and conditionally
+    * searching for 'cars' in addition to 'cars*' (i.e., (and ... (or (field f
+    * 'cars') (field f 'cars*') ...)). Now you can match both 'cars' and
+    * 'carsick'.
+    */
+   public function addWildcard() {
+      $lastChar = substr($this->str, -1);
+      if ($lastChar != '*') {
+         $this->str .= '*';
+      }
       return $this;
    }
 
@@ -357,8 +400,9 @@ class CloudSearchQueryString {
          return $this->str;
       } else {
          $s = preg_replace('/([\'\\\\])/', '\\\\$1', $this->str);
-         if ($escapeComma == self::ESCAPE_COMMA)
+         if ($escapeComma == self::ESCAPE_COMMA) {
             $s = str_replace(',', '\\,', $s);
+         }
          return "'{$s}'";
       }
    }
@@ -376,8 +420,8 @@ class CloudSearchQueryString {
  * No matter what the input, the result of the `build` method is always a
  * string. For example:
  *
- *    use \Aws\CloudSearch\Query\CloudSearchQueryClient;
- *    use \Aws\CloudSearch\Query\CloudSearchQueryString;
+ *    use \Aws\CloudSearchQuery\CloudSearchQueryClient;
+ *    use \Aws\CloudSearchQuery\CloudSearchQueryString;
  *
  *    $client = CloudSearchQueryClient::factory();
  *    $q = $client->newQuery();
@@ -460,18 +504,22 @@ class CloudSearchQueryFacetSort {
 
    function alpha() {
       $this->string = 'alpha';
+      return $this;
    }
 
    function count() {
       $this->string = 'count';
+      return $this;
    }
 
    function max($byField, $desc = false) {
       $this->string = ($desc ? '-' : '') . "max({$byField})";
+      return $this;
    }
 
    function sum($byField, $desc = false) {
       $this->string = ($desc ? '-' : '') . "sum({$byField})";
+      return $this;
    }
 
    function build() {
