@@ -306,7 +306,10 @@ class CloudSearchQuery {
       $exps = [];
 
       foreach ($this->expIndex as $exp) {
-         $exps[] = $this->buildBooleanQuerySubexp($exp);
+         if (is_array($exp)) {
+            $exp = $this->buildBooleanQuerySubexp($exp);
+         }
+         $exps[] = $exp;
       }
 
       $numExps = count($exps);
