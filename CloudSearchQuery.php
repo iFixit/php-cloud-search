@@ -432,6 +432,8 @@ class CloudSearchQueryString {
  *    $str = $uintObj->build()  // '28..29'
  *    $uintObj = $q::uint(29);
  *    $str = $uintObj->build()  // '29'
+ *
+ * When given a badly-formatted string, default to an exact value of 0.
  */
 class CloudSearchQueryUint {
    protected $from;
@@ -456,6 +458,8 @@ class CloudSearchQueryUint {
             $this->from = !empty($matches[1]) ?
              max(0, intval($matches[1])) : NULL;
             $this->to = max(0, intval($matches[2]));
+         } else {
+            $this->exact = 0;
          }
       } else if (is_numeric($n)) {
          $this->exact = max(0, intval($n));
