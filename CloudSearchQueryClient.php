@@ -2,12 +2,14 @@
 
 namespace Aws\CloudSearchQuery;
 
+require_once __DIR__ . '/CloudSearchJsonExceptionParser.php';
 require_once __DIR__ . '/CloudSearchClientBuilder.php';
 require_once __DIR__ . '/CloudSearchQuery.php';
 
 use Aws\Common\Client\AbstractClient;
 use Aws\Common\Enum\ClientOptions as Options;
 use Aws\CloudSearch\CloudSearchClientBuilder;
+use Aws\CloudSearch\CloudSearchJsonExceptionParser;
 
 /**
  * A client for making query requests to an established CloudSearch index. The
@@ -34,6 +36,7 @@ class CloudSearchQueryClient extends AbstractClient {
             Options::SERVICE_DESCRIPTION =>
              __DIR__ . '/Resources/' . self::DESCRIPTION_NAME
          ])
+       ->setExceptionParser(new CloudSearchJsonExceptionParser())
        ->build();
    }
 
@@ -47,8 +50,9 @@ class CloudSearchQueryClient extends AbstractClient {
 
    public function multiQuery($batchArgs) {
       $commands = [];
-      foreach ($batchArgs as $args)
+      foreach ($batchArgs as $args) {
          $commands[] = $this->prepareQueryCommand($args);
+      }
 
       $commands = $this->execute($commands);
 
@@ -58,8 +62,9 @@ class CloudSearchQueryClient extends AbstractClient {
    }
 
    protected function prepareQueryCommand($args) {
-      if (is_a($args, '\Aws\CloudSearchQuery\CloudSearchQuery'))
+      if (is_a($args, '\Aws\CloudSearchQuery\CloudSearchQuery')) {
          $args = $args->build();
+      }
 
       return $this->getCommand('query', $args);
    }

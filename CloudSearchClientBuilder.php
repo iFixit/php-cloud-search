@@ -2,6 +2,11 @@
 
 namespace Aws\CloudSearch;
 
+// We don't directly use the exception class here, but it needs to be defined
+// so that it will be found by the NamespaceExceptionFactory in the event of an
+// error.
+require_once __DIR__ . '/CloudSearchQueryInfoException.php';
+
 require_once __DIR__ . '/Backoff.php';
 
 use Aws\Common\Client\ClientBuilder;
@@ -10,8 +15,9 @@ use Aws\Common\Credentials\Credentials;
 use Aws\Common\Credentials\CredentialsInterface;
 use Aws\Common\Credentials\NullCredentials;
 use Aws\Common\Enum\ClientOptions as Options;
+use Aws\Common\Exception\ExceptionListener;
 use Aws\Common\Exception\InvalidArgumentException;
-use Aws\Common\Exception\Parser\JsonQueryExceptionParser;
+use Aws\Common\Exception\NamespaceExceptionFactory;
 use Guzzle\Common\Collection;
 use Guzzle\Http\Url;
 use Guzzle\Service\Description\ServiceDescription;
@@ -68,7 +74,6 @@ class CloudSearchClientBuilder extends ClientBuilder {
       $config[Options::REGION] = $config[Options::SIGNATURE_REGION] = $region;
 
       // Create dependencies
-      $exceptionParser = new JsonQueryExceptionParser();
       $description = ServiceDescription::factory(sprintf(
          $config->get(Options::SERVICE_DESCRIPTION),
          $config->get(Options::VERSION)
@@ -97,6 +102,15 @@ class CloudSearchClientBuilder extends ClientBuilder {
       // Create client
       $client = new $clientClass($credentials, $signature, $config);
       $client->setDescription($description);
+
+      // Add a subscriber that can throw more specific exceptions
+      if ($this->clientNamespace) {
+         $exceptionFactory = new NamespaceExceptionFactory(
+            $this->exceptionParser,
+            "{$this->clientNamespace}\\Exception"
+         );
+         $client->addSubscriber(new ExceptionListener($exceptionFactory));
+      }
 
       // Add the UserAgentPlugin to append to the User-Agent header of requests
       $client->addSubscriber(new UserAgentListener);
