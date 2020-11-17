@@ -29,6 +29,7 @@ class CloudSearchJsonExceptionParser extends JsonQueryExceptionParser {
          if (!isset($json['error']) || !isset($json['rid']) {
             $ex = new \DebugException("Malform CloudSearch Error Response");
             $ex->appendDebugInfo($response);
+            $ex->appendDebugInfo($data);
             throw $ex;
          }
          $data['code'] = $json['error'];
