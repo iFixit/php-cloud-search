@@ -2,13 +2,12 @@
 
 namespace Aws\CloudSearchDoc;
 
-require_once __DIR__ . '/CloudSearchJsonExceptionParser.php';
 require_once __DIR__ . '/CloudSearchClientBuilder.php';
 
 use Aws\CloudSearch\CloudSearchClientBuilder;
-use Aws\CloudSearch\CloudSearchJsonExceptionParser;
 use Aws\Common\Client\AbstractClient;
 use Aws\Common\Enum\ClientOptions as Options;
+use Aws\Common\Exception\Parser\JsonQueryExceptionParser;
 
 /**
  * A client for sending document batches to an established CloudSearch index.
@@ -38,7 +37,7 @@ class CloudSearchDocClient extends AbstractClient {
             Options::SERVICE_DESCRIPTION =>
              __DIR__ . '/Resources/' . self::DESCRIPTION_NAME
          ])
-       ->setExceptionParser(new CloudSearchJsonExceptionParser())
+       ->setExceptionParser(new JsonQueryExceptionParser())
        ->build();
    }
 }
