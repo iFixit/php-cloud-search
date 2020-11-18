@@ -2,9 +2,6 @@
 
 namespace Aws\CloudSearch;
 
-require_once __DIR__ . '/CloudSearchJsonExceptionParser.php';
-
-use Aws\CloudSearch\CloudSearchJsonExceptionParser;
 use Aws\Common\Client\ThrottlingErrorChecker;
 use Guzzle\Plugin\Backoff\BackoffPlugin;
 use Guzzle\Plugin\Backoff\CurlBackoffStrategy;
@@ -41,9 +38,8 @@ class Backoff {
       return
        new BackoffPlugin(
        new TruncatedBackoffStrategy($retries,
-       new ThrottlingErrorChecker(new CloudSearchJsonExceptionParser(),
        new CurlBackoffStrategy(null,
        new HttpBackoffStrategy($codes,
-       new ExponentialBackoffStrategy())))));
+       new ExponentialBackoffStrategy()))));
    }
 }
